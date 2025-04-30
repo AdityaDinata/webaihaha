@@ -10,8 +10,7 @@ const LandingPengguna = () => {
   const navigate = useNavigate();
   const { addHabit } = useHabits();
   const [habit, setHabit] = useState("");
-  const [recommendations, setRecommendations] = useState([]);
-  const [selectedHabits, setSelectedHabits] = useState([]);
+  const [messages, setMessages] = useState([]); // Change to store chat messages
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,8 +23,17 @@ const LandingPengguna = () => {
     setError("");
     setLoading(true);
     try {
+      // Add user's message to chat first
+      const userMessage = { text: habit, sender: "user" };
+      setMessages((prevMessages) => [...prevMessages, userMessage]);
+  
+      // Generate recommendations from the AI
       const recs = await generateRecommendations(habit);
-      setRecommendations(recs);
+      
+      // Check if recs is an array, and if not, treat it as a single string.
+      const botMessage = { text: Array.isArray(recs) ? recs.join("\n") : recs, sender: "bot" };
+      
+      setMessages((prevMessages) => [...prevMessages, botMessage]); // Add bot's response to chat
     } catch (err) {
       console.error("Error generating recommendations:", err);
       setError("Gagal mendapatkan rekomendasi");
@@ -33,6 +41,7 @@ const LandingPengguna = () => {
       setLoading(false);
     }
   };
+  
 
   const handleSelectHabit = (e) => {
     const habitName = e.target.value;
@@ -78,56 +87,40 @@ const LandingPengguna = () => {
       <AppNavbar />
       <div className="flex flex-col items-center justify-center text-center py-10 px-4">
         <h2 className="text-3xl font-bold text-gray-800 mb-6">
-          Masukkan Kebiasaan Anda
+          Chat dengan Kami untuk Mendapatkan Rekomendasi Kebiasaan Sehat
         </h2>
 
+        {/* Chatbox */}
+        <div className="w-full max-w-lg bg-white p-6 rounded-lg shadow-md mb-4 h-80 overflow-y-auto">
+          <div className="space-y-4">
+            {messages.map((msg, index) => (
+              <div key={index} className={`flex ${msg.sender === "user" ? "justify-start" : "justify-end"}`}>
+                <div className={`p-3 rounded-md ${msg.sender === "user" ? "bg-blue-500 text-white" : "bg-gray-200 text-black"}`}>
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Input for Habit */}
         <form onSubmit={handleSubmitHabit} className="w-full max-w-lg bg-white p-6 rounded-lg shadow-md">
           <TextInput
             id="habit"
             type="text"
-            placeholder="Masukkan kebiasaan Anda (misalnya: berolahraga)"
+            placeholder="Silahkan Tanyakan Apa Saja"
             required
             value={habit}
             onChange={(e) => setHabit(e.target.value)}
             className="mb-4"
           />
           <Button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2" disabled={loading}>
-            {loading ? <Spinner size="sm" light={true} /> : "Dapatkan Rekomendasi"}
+            {loading ? <Spinner size="sm" light={true} /> : "Kirim"}
           </Button>
         </form>
 
         {error && <p className="text-red-600 mt-4">{error}</p>}
-
-        {recommendations.length > 0 && (
-          <div className="mt-8 w-full max-w-2xl bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">
-              Rekomendasi Kebiasaan
-            </h3>
-            <ul className="space-y-2">
-              {recommendations.slice(0, 5).map((rec, index) => (
-                <li key={index} className="flex items-center bg-gray-100 p-3 rounded-md shadow-sm">
-                  <input
-                    type="checkbox"
-                    id={`habit-${index}`}
-                    value={rec}
-                    onChange={handleSelectHabit}
-                    className="mr-3"
-                  />
-                  <label htmlFor={`habit-${index}`} className="text-gray-700">{rec}</label>
-                </li>
-              ))}
-            </ul>
-            <Button
-              className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 mt-4"
-              onClick={saveSelectedHabitsToAPI}
-              disabled={loading}
-            >
-              {loading ? <Spinner size="sm" light={true} /> : "Konfirmasi Kebiasaan Terpilih"}
-            </Button>
-          </div>
-        )}
       </div>
-
     </div>
   );
 };
